@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import { configDotenv } from 'dotenv';
 import connect_db from './config/config';
+import user_route from './routes/user.route';
 
 configDotenv();
 connect_db();
@@ -16,6 +17,8 @@ app.get('/', (req: Request, res: Response) => {
 
     res.send('Hello World' + add(30, 49));
 });
+
+app.use('/api/v1/user', user_route);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
