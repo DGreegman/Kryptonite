@@ -1,16 +1,18 @@
-import bcrypt from 'bcryptjs';
+import bcrypt, { compareSync } from 'bcryptjs';
 import User from '../models/user.model';
 import jwt from 'jsonwebtoken';
 
 class LoginService {
     async login_user(email: string, password: string) {
         const user = await User.findOne({ email });
+        console.log(user);
         if (!user) {
             throw new Error('User not found');
         }
 
         // Check if the password is correct
         const isPasswordValid = bcrypt.compareSync(password, user.password);
+        console.log(isPasswordValid);
         if (!isPasswordValid) {
             throw new Error('Invalid password');
         }

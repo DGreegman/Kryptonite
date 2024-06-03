@@ -115,7 +115,7 @@ class UserController {
             }
             user.active = true;
             user.active_token = '';
-            user.save();
+            await user.save();
             res.status(200).json({
                 status: 'success',
                 message: 'Account Successfully Activated....'
@@ -147,10 +147,11 @@ class UserController {
                 });
             }
             const otp = generate_otp();
-            const fiveMins = 5 * 60 * 1000;
+            const five_mins = 1 * 60 * 1000;
             const now = new Date();
-            user.otp_expire = new Date(now.getTime() + fiveMins);
+            user.otp_expire = new Date(now.getTime() + five_mins);
             user.otp = otp;
+            console.log(user.otp);
             user.save();
             await sendEmail({
                 email: user.email,
@@ -192,7 +193,108 @@ class UserController {
             });
             user.otp = undefined;
             user.otp_expire = undefined;
-            user.save();
+            await user.save();
+        } catch (error: unknown | any) {
+            res.status(500).json({
+                status: 'failed',
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
+        }
+    }
+
+    async generate_api_key(req: Request, res: Response) {
+        try {
+            const { user } = res.locals;
+            if (!user) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Email is required'
+                });
+            }
+            const user_email = await user_service.find_user(user);
+            if (!user_email) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'User not found'
+                });
+            }
+            const api_key = await user_service.generate_api_key(user_email);
+            console.log(api_key);
+            res.status(200).json({
+                status: 'success',
+                data: api_key.api_key
+            });
+        } catch (error: unknown | any) {
+            res.status(500).json({
+                status: 'failed',
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
+        }
+    }
+
+    async view_api_key(req: Request, res: Response) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Email is required'
+                });
+            }
+            const user = await user_service.find_user(email);
+            if (!user) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'User not found'
+                });
+            }
+            if (user.api_key === undefined) {
+                return res.status(200).json({
+                    status: 'fail',
+                    message: 'API Key not generated'
+                });
+            }
+            console.log(user);
+            res.status(200).json({
+                status: 'success',
+                data: user.api_key
+            });
+        } catch (error: unknown | any) {
+            res.status(500).json({
+                status: 'failed',
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
+        }
+    }
+
+    async delete_api_key(req: Request, res: Response) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Email is required'
+                });
+            }
+            const user = await user_service.find_user(email);
+            if (!user) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'User not found'
+                });
+            }
+            user.api_key = undefined;
+            await user.save();
+            res.status(200).json({
+                status: 'success',
+                message: 'API Key deleted successfully'
+            });
         } catch (error: unknown | any) {
             res.status(500).json({
                 status: 'failed',

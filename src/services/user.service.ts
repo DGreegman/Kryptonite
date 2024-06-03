@@ -34,6 +34,12 @@ class CreateUserService {
     async validate_otp(otp: string) {
         return await User.findOne({ otp, otp_expire: { $gt: new Date() } });
     }
+
+    async generate_api_key(user: IUser) {
+        const api_key = crypto.randomBytes(32).toString('hex');
+        user.api_key = api_key;
+        return await user.save();
+    }
 }
 
 export default new CreateUserService();

@@ -22,6 +22,9 @@ const UserSchema = new Schema(
         confirm_password: {
             type: String
         },
+        api_key: {
+            type: String
+        },
         otp: {
             type: Number
         },
@@ -39,14 +42,6 @@ const UserSchema = new Schema(
         versionKey: false
     }
 );
-
-UserSchema.methods.activate_account = function () {
-    const activate_token = crypto.randomBytes(32).toString('hex');
-    this.active_token = crypto.createHash('sha256').update(activate_token).digest('hex');
-    console.log(`Your activate token is ${activate_token}`);
-    console.log(`Your saved active token is ${this.active_token}`);
-    return activate_token;
-};
 
 const User = mongoose.model<IUser>('User', UserSchema);
 export default User;

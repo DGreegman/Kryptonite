@@ -6,6 +6,7 @@ interface IUser extends Document {
     email: string;
     password: string;
     confirm_password?: string;
+    api_key?: string;
     otp?: number;
     otp_expire?: Date;
     active_token: string;
