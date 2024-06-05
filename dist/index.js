@@ -17,7 +17,7 @@ const port = process.env.PORT || 8080;
 app.use(express_1.default.json());
 app.use('/api/v1/user', user_route_1.default);
 app.use('/api/v1/user-image', user_image_route_1.default);
-// DEFAULT ROUTE
+// DEFAULT ROUTE CALLED WHEN A ROUTE USED BY THE USER DOESN'T EXIST
 app.use('*', (req, res, next) => {
     const error = new custom_error_1.default(`Oops...., It seems like the Route ${req.originalUrl} You are looking for does not Exist`, 404);
     next(error);

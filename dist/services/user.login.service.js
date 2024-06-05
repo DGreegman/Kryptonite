@@ -29,6 +29,7 @@ class LoginService {
             if (!isPasswordValid) {
                 throw new Error('Invalid password');
             }
+            // Checking a user's account is activated
             if (user.active !== true) {
                 throw new Error('User Has not Activated his account');
             }

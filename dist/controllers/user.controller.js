@@ -17,11 +17,11 @@ const user_login_service_1 = __importDefault(require("../services/user.login.ser
 const user_verification_email_1 = __importDefault(require("../email/user-verification.email"));
 const otp_service_helper_1 = __importDefault(require("../helper/otp-service.helper"));
 class UserController {
-    register_user(req, res, next) {
+    register_user(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             const user_data = req.body;
             try {
-                if (!user_data.first_name || !user_data.last_name || !user_data.email || !user_data.password || !user_data.confirm_password) {
+                if (!user_data.username || !user_data.email || !user_data.password || !user_data.confirm_password) {
                     return res.status(400).json({
                         status: 'failed',
                         message: 'All fields are required'
@@ -81,12 +81,18 @@ class UserController {
                     });
                 }
                 const { token, user } = yield user_login_service_1.default.login_user(email, password);
+                if (user.otp !== undefined) {
+                    return res.status(400).json({
+                        status: 'failed',
+                        message: 'Please verify your Identity (2FA) to login and use our services...'
+                    });
+                }
                 res.status(200).json({
                     status: 'success',
                     data: [
                         {
                             token,
-                            first_name: user.first_name
+                            first_name: user.username
                         }
                     ]
                 });
@@ -101,29 +107,71 @@ class UserController {
             }
         });
     }
-    get_all_users(req, res) {
+    login_otp(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const users = yield user_service_1.default.get_all_users();
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Email is required'
+                });
+            }
+            const user = yield user_service_1.default.find_user(email);
+            if (!user) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'User not found'
+                });
+            }
+            // checking if a user is active before
+            if (user.active === false) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Account not activated, Kindly activate your account to be able to proceed'
+                });
+            }
+            // calling the function to generate otp 6 digit
+            const otp = (0, otp_service_helper_1.default)();
+            console.log(otp);
+            const five_mins = 5 * 60 * 1000;
+            const now = new Date();
+            user.otp_expire = new Date(now.getTime() + five_mins);
+            user.otp = otp;
+            yield user.save();
+            const reset_url = `${req.protocol}://${req.get('host')}/api/v1/user/validate-otp`;
+            yield (0, user_verification_email_1.default)({
+                email: user.email,
+                subject: 'Email Verification',
+                message: `Please click on the link to verify and add your OTP in the field provided:\n\n${reset_url}\n\n${user.otp}\n\nPlease Note that it will expire in 5mins`
+            });
+            res.status(200).json({
+                status: 'success',
+                message: 'Check Your email for your 2FA OTP'
+            });
+        });
+    }
+    /*     async get_all_users(req: Request, res: Response) {
+            const users = await user_service.get_all_users();
             res.status(200).json({
                 status: 'success',
                 data: users
             });
-        });
-    }
-    delete_users(req, res) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const deleted_users = yield user_service_1.default.delete_users();
+        }
+    
+        async delete_users(req: Request, res: Response) {
+            const deleted_users = await user_service.delete_users();
             res.status(200).json({
                 status: 'success',
                 data: deleted_users
             });
-        });
-    }
+        } */
+    // validate token to activate a user's account when the user registers newly
     validate_token(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { token } = req.params;
                 const user = yield user_service_1.default.validate_token(token);
+                user.active_token;
                 if (!user) {
                     return res.status(400).json({
                         status: 'failed',
@@ -148,50 +196,48 @@ class UserController {
             }
         });
     }
-    send_otp(req, res) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { email } = req.body;
-                const user = yield user_service_1.default.find_user(email);
-                if (!user) {
-                    return res.status(400).json({
-                        status: 'failed',
-                        message: 'User not found'
-                    });
-                }
-                if (user.active === false) {
-                    return res.status(400).json({
-                        status: 'failed',
-                        message: 'Account not activated, Kindly activate your account to be able to proceed'
-                    });
-                }
-                const otp = (0, otp_service_helper_1.default)();
-                const five_mins = 1 * 60 * 1000;
-                const now = new Date();
-                user.otp_expire = new Date(now.getTime() + five_mins);
-                user.otp = otp;
-                console.log(user.otp);
-                user.save();
-                yield (0, user_verification_email_1.default)({
-                    email: user.email,
-                    subject: 'One Time Password',
-                    message: `Kindly use the OTP provided for you below\n\n ${otp}\n\nPlease Note that it will expire in 5mins`
-                });
-                res.status(200).json({
-                    status: 'success',
-                    message: 'OTP sent to your email'
-                });
-            }
-            catch (error) {
-                res.status(500).json({
+    /*     async send_otp(req: Request, res: Response) {
+        try {
+            const { email } = req.body;
+            const user = await user_service.find_user(email);
+            if (!user) {
+                return res.status(400).json({
                     status: 'failed',
-                    message: error.message,
-                    name: error.name,
-                    stack: error.stack
+                    message: 'User not found'
                 });
             }
-        });
-    }
+            if (user.active === false) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Account not activated, Kindly activate your account to be able to proceed'
+                });
+            }
+            const otp = generate_otp();
+            const five_mins = 1 * 60 * 1000;
+            const now = new Date();
+            user.otp_expire = new Date(now.getTime() + five_mins);
+            user.otp = otp;
+            console.log(user.otp);
+            user.save();
+            await sendEmail({
+                email: user.email,
+                subject: 'One Time Password',
+                message: `Kindly use the OTP provided for you below\n\n ${otp}\n\nPlease Note that it will expire in 5mins`
+            });
+            res.status(200).json({
+                status: 'success',
+                message: 'OTP sent to your email'
+            });
+        } catch (error: unknown | any) {
+            res.status(500).json({
+                status: 'failed',
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
+        }
+    } */
+    // validate OTP send to the user
     validate_otp(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -227,28 +273,31 @@ class UserController {
             }
         });
     }
+    // generate API key to use and upload image
     generate_api_key(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { user } = res.locals;
-                if (!user) {
+                const email = req.body.email;
+                const id = res.locals.id;
+                if (!email) {
                     return res.status(400).json({
                         status: 'failed',
                         message: 'Email is required'
                     });
                 }
-                const user_email = yield user_service_1.default.find_user(user);
-                if (!user_email) {
+                // checking if a user exists with a middleware
+                if (email !== res.locals.email) {
                     return res.status(400).json({
                         status: 'failed',
-                        message: 'User not found'
+                        message: 'User not Found'
                     });
                 }
-                const api_key = yield user_service_1.default.generate_api_key(user_email);
-                console.log(api_key);
-                res.status(200).json({
-                    status: 'success',
-                    data: api_key.api_key
+                // generating the api key
+                user_service_1.default.generate_api_key(email).then((user) => {
+                    res.status(200).json({
+                        status: true,
+                        data: user.api_key
+                    });
                 });
             }
             catch (error) {
@@ -261,6 +310,7 @@ class UserController {
             }
         });
     }
+    // to view API method but a user must be logged in
     view_api_key(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
