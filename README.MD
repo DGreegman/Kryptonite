@@ -62,4 +62,5 @@ The API is deployed on render:
    - Kryptonians should be able to invalidate an API key, making it unusable.
    - API keys should be issued once and never shown again to the Kryptonian.
 
-
+# CONTRIBUTOR
+> obeagug@gmail.com

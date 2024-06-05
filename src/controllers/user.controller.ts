@@ -241,7 +241,8 @@ class UserController {
                     message: 'OTP is required'
                 });
             }
-            const user = await user_service.validate_otp(otp);
+            const user: string | any = await user_service.validate_otp(otp);
+            
             if (!user) {
                 return res.status(400).json({
                     status: 'failed',

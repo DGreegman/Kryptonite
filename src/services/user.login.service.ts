@@ -22,7 +22,7 @@ class LoginService {
             throw new Error('User Has not Activated his account');
         }
         // Generate a JWT token
-        const token = jwt.sign({ id: user._id, email: user.email }, process.env.SECRET_KEY as string, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, email: user.email }, process.env.SECRET_KEY as string, { expiresIn: '12h' });
 
         return { token, user };
     }

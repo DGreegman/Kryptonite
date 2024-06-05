@@ -19,8 +19,7 @@ class CreateUserService {
         return await User.findById(id);
     }
     async find_user(email: string)  {
-        const user: string | any = await User.findOne({ email });
-        
+        const user: string | any = await User.findOne({ email });    
         return user;
     }
 
