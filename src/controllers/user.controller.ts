@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import user_service from '../services/user.service';
 import user_service_login from '../services/user.login.service';
 import IUser from '../interfaces/user.interface';
@@ -6,7 +6,7 @@ import sendEmail from '../email/user-verification.email';
 import generate_otp from '../helper/otp-service.helper';
 
 class UserController {
-    async register_user(req: Request, res: Response, next: NextFunction) {
+    async register_user(req: Request, res: Response) {
         const user_data: IUser = req.body;
         try {
             if (!user_data.first_name || !user_data.last_name || !user_data.email || !user_data.password || !user_data.confirm_password) {
@@ -69,7 +69,15 @@ class UserController {
                     message: 'All fields are required'
                 });
             }
+
             const { token, user } = await user_service_login.login_user(email, password);
+
+            if (user.otp !== undefined) {
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Please verify your Identity (2FA) to login and use our services...'
+                });
+            }
             res.status(200).json({
                 status: 'success',
                 data: [
@@ -88,7 +96,54 @@ class UserController {
             });
         }
     }
-    async get_all_users(req: Request, res: Response) {
+
+    async login_otp(req: Request, res: Response) {
+
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                status: 'failed',
+                message: 'Email is required'
+            });
+        }
+
+        const user: string | any = await user_service.find_user(email);
+        if (!user) {
+            return res.status(400).json({
+                status: 'failed',
+                message: 'User not found'
+            });
+        }
+
+        // checking if a user is active before
+        if (user.active === false) {
+            return res.status(400).json({
+                status: 'failed',
+                message: 'Account not activated, Kindly activate your account to be able to proceed'
+            });
+        }
+
+        // calling the function to generate otp 6 digit
+        const otp = generate_otp();
+        console.log(otp);
+        const five_mins = 5 * 60 * 1000;
+        const now = new Date();
+        user.otp_expire = new Date(now.getTime() + five_mins);
+        user.otp = otp;
+        await user.save();
+        const reset_url = `${req.protocol}://${req.get('host')}/api/v1/user/validate-otp`;
+        await sendEmail({
+            email: user.email,
+            subject: 'Email Verification',
+            message: `Please click on the link to verify and add your OTP in the field provided:\n\n${reset_url}\n\n${user.otp}\n\nPlease Note that it will expire in 5mins`
+
+        });
+        res.status(200).json({
+            status: 'success',
+            message: 'Check Your email for your 2FA OTP'
+        });
+    }
+/*     async get_all_users(req: Request, res: Response) {
         const users = await user_service.get_all_users();
         res.status(200).json({
             status: 'success',
@@ -102,11 +157,15 @@ class UserController {
             status: 'success',
             data: deleted_users
         });
-    }
+    } */
+
+
+    // validate token to activate a user's account when the user registers newly
     async validate_token(req: Request, res: Response) {
         try {
             const { token } = req.params;
-            const user = await user_service.validate_token(token);
+            const user: string | any = await user_service.validate_token(token);
+            user.active_token;
             if (!user) {
                 return res.status(400).json({
                     status: 'failed',
@@ -130,7 +189,7 @@ class UserController {
         }
     }
 
-    async send_otp(req: Request, res: Response) {
+    /*     async send_otp(req: Request, res: Response) {
         try {
             const { email } = req.body;
             const user = await user_service.find_user(email);
@@ -170,7 +229,9 @@ class UserController {
                 stack: error.stack
             });
         }
-    }
+    } */
+
+    // validate OTP send to the user
     async validate_otp(req: Request, res: Response) {
         try {
             const { otp } = req.body;
@@ -204,27 +265,32 @@ class UserController {
         }
     }
 
+    // generate API key to use and upload image
     async generate_api_key(req: Request, res: Response) {
         try {
-            const { user } = res.locals;
-            if (!user) {
+            const email = req.body.email;
+            const id = res.locals.id;
+            if (!email) {
                 return res.status(400).json({
                     status: 'failed',
                     message: 'Email is required'
                 });
             }
-            const user_email = await user_service.find_user(user);
-            if (!user_email) {
+
+            // checking if a user exists with a middleware
+            if (email !== res.locals.email) {
                 return res.status(400).json({
                     status: 'failed',
-                    message: 'User not found'
+                    message: 'User not Found'
                 });
             }
-            const api_key = await user_service.generate_api_key(user_email);
-            console.log(api_key);
-            res.status(200).json({
-                status: 'success',
-                data: api_key.api_key
+
+            // generating the api key
+            user_service.generate_api_key(email).then((user) => {
+                res.status(200).json({
+                    status: true,
+                    data: user.api_key
+                });
             });
         } catch (error: unknown | any) {
             res.status(500).json({
@@ -236,6 +302,7 @@ class UserController {
         }
     }
 
+    // to view API method but a user must be logged in
     async view_api_key(req: Request, res: Response) {
         try {
             const { email } = req.body;
@@ -245,6 +312,8 @@ class UserController {
                     message: 'Email is required'
                 });
             }
+
+
             const user = await user_service.find_user(email);
             if (!user) {
                 return res.status(400).json({
@@ -304,6 +373,27 @@ class UserController {
             });
         }
     }
+
+    /*   async forgot_password(req: Request, res: Response) {
+        const email = req.body.email 
+        if (!email) {
+            return res.status(400).json({
+                status: 'failed',
+                message: 'Email is required'
+            });
+        }
+
+
+        const user = await user_service.find_user(email);
+        if (!user) {
+            return res.status(400).json({
+                status: 'failed',
+                message: 'User not found'
+            });
+        }
+        const reset_token = generate_otp();
+        const reset_url = `${req.protocol}://${req.get('host')}/api/v1/user/reset-password/${user.reset_token}`;
+    } */
 }
 
 export default new UserController();

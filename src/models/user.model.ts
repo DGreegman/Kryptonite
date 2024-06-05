@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import IUser from '../interfaces/user.interface';
-import crypto from 'crypto';
+
 const UserSchema = new Schema(
     {
         first_name: {

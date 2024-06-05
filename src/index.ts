@@ -18,7 +18,7 @@ app.use(express.json());
 app.use('/api/v1/user', user_route);
 app.use('/api/v1/user-image', user_image);
 
-// DEFAULT ROUTE
+// DEFAULT ROUTE CALLED WHEN A ROUTE USED BY THE USER DOESN'T EXIST
 app.use('*', (req: Request, res: Response, next: NextFunction) => {
     const error = new CustomError(`Oops...., It seems like the Route ${req.originalUrl} You are looking for does not Exist`, 404);
     next(error);
