@@ -3,14 +3,11 @@ import IUser from '../interfaces/user.interface';
 
 const UserSchema = new Schema(
     {
-        first_name: {
+        username: {
             type: String,
             required: true
         },
-        last_name: {
-            type: String,
-            required: true
-        },
+        
         email: {
             type: String,
             required: true

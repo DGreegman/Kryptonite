@@ -9,7 +9,7 @@ class UserController {
     async register_user(req: Request, res: Response) {
         const user_data: IUser = req.body;
         try {
-            if (!user_data.first_name || !user_data.last_name || !user_data.email || !user_data.password || !user_data.confirm_password) {
+            if (!user_data.username || !user_data.email || !user_data.password || !user_data.confirm_password) {
                 return res.status(400).json({
                     status: 'failed',
                     message: 'All fields are required'
@@ -83,7 +83,7 @@ class UserController {
                 data: [
                     {
                         token,
-                        first_name: user.first_name
+                        first_name: user.username
                     }
                 ]
             });

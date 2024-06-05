@@ -6,13 +6,13 @@ import generate_otp from '../helper/otp-service.helper';
 
 class CreateUserService {
     async register_user(data: IUser) {
-        const { first_name, last_name, email, password, active_token, otp } = data;
+        const { username, email, password, active_token, otp } = data;
         const initial_otp = generate_otp()
         const hash_password = bcrypt.hashSync(password, 10);
         const activate_token = crypto.randomBytes(32).toString('hex');
         const token = crypto.createHash('sha256').update(activate_token).digest('hex');
 
-        return await User.create({ first_name, last_name, email, password: hash_password, active_token: token, otp:initial_otp });
+        return await User.create({ username, email, password: hash_password, active_token: token, otp:initial_otp });
     }
 
     async find_user_by_id(id: string) {
